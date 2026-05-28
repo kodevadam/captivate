@@ -24,5 +24,6 @@ fi
 
 rm -f /usr/local/bin/captive-gate /usr/local/bin/captive-session
 rm -f "/usr/share/xsessions/${SESSION_NAME}.desktop"
-echo ">> Removed gate, session wrapper, and xsession entry."
+rm -f /etc/X11/xorg.conf.d/10-captive-seal.conf
+echo ">> Removed gate, session wrapper, xsession entry, and VT seal (if any)."
 echo ">> Reboot to return to your normal desktop:  sudo reboot"
