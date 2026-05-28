@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Captive XFCE
+Comment=XFCE gated by the captive time/date prompt
+Exec=/usr/local/bin/captive-session
+TryExec=/usr/local/bin/captive-session
+Type=Application
+DesktopNames=XFCE
