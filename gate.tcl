@@ -43,6 +43,8 @@ entry .c.time -justify center -font {Sans 18} -width 18
 
 button .c.unlock -text "Set clock & continue" -font {Sans 14} -command submit
 label  .c.error  -text "" -bg $BG -fg $ERR -font {Sans 12}
+label  .c.bypass -text "Ctrl+Alt+Esc  -  skip to the desktop" \
+    -bg $BG -fg $DIM -font {Sans 10}
 
 grid .c.title  -row 0 -column 0 -pady {0 4}
 grid .c.hint   -row 1 -column 0 -pady {0 18}
@@ -52,6 +54,7 @@ grid .c.tlbl   -row 4 -column 0 -sticky w
 grid .c.time   -row 5 -column 0 -pady {0 12}
 grid .c.unlock -row 6 -column 0 -pady {4 8}
 grid .c.error  -row 7 -column 0
+grid .c.bypass -row 8 -column 0 -pady {18 0}
 
 # --- submit ---------------------------------------------------------------
 proc reject {msg} {
@@ -83,6 +86,13 @@ proc submit {} {
     exit 0
 }
 
+# Escape hatch: jump straight to a normal XFCE session without setting the
+# clock. The wrapper exec's startxfce4 on exit 0; autologin means no password.
+proc bypass {} {
+    catch {grab release .}
+    exit 0
+}
+
 # --- input grab & key handling -------------------------------------------
 proc grab_input {} {
     if {[catch {grab -global .}]} {
@@ -92,7 +102,7 @@ proc grab_input {} {
     focus -force .c.date
 }
 
-bind . <Escape> {break}                  ;# swallow Escape
+bind all <Control-Alt-Escape> {bypass}
 bind .c.date <Return> {focus -force .c.time}
 bind .c.time <Return> {submit}
 wm protocol . WM_DELETE_WINDOW {}         ;# ignore close requests

@@ -74,6 +74,11 @@ Any real date/time is accepted and becomes the clock. There is no "correct"
 answer to guess and no tolerance window — you are *setting* the time, not
 proving you know it.
 
+**Escape hatch:** press **Ctrl+Alt+Esc** at the gate to skip straight into a
+normal XFCE session without setting the clock. Because the desktop autologins,
+no password is needed. This works even in `--seal` mode (it's handled inside
+the gate, not by the X server), so it's your way back in if something's off.
+
 ## Full lockdown (optional)
 
 By default you can still reach a text console with **Ctrl+Alt+F2** — your
@@ -94,10 +99,11 @@ session (desktop included).
 
 ## A note on VTs (not a bug)
 
-When the gate is up, your graphical session is already running on its own VT.
-`Ctrl+Alt+F2` switches to a spare *text* console — it does not spawn a second
-graphical login. To get back to the gate/desktop, switch to its VT with
-`Ctrl+Alt+F7` (or `F1`), or `sudo chvt 7` from the console.
+When the gate is up, *it is* your graphical X session — XFCE does not exist as
+a running session until the gate exits. So `Ctrl+Alt+F7` shows the gate, not a
+desktop, and `Ctrl+Alt+F2` switches to a spare *text* console. There is no
+separate desktop VT to find; to reach XFCE, either set the clock or press
+**Ctrl+Alt+Esc** to skip to it.
 
 ## Recovery / uninstall
 
