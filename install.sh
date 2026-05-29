@@ -11,9 +11,11 @@ set -eu
 SESSION_NAME="captive-xfce"
 GATE_BIN="/usr/local/bin/captive-gate"
 SESSION_BIN="/usr/local/bin/captive-session"
+SETCLOCK_BIN="/usr/local/bin/captive-setclock"
 XSESSION="/usr/share/xsessions/${SESSION_NAME}.desktop"
 LIGHTDM_CONF="/etc/lightdm/lightdm.conf"
 XORG_SEAL="/etc/X11/xorg.conf.d/10-captive-seal.conf"
+SUDOERS="/etc/sudoers.d/captive"
 SRC="$(cd "$(dirname "$0")" && pwd)"
 
 # --seal also disables VT switching (Ctrl+Alt+F-keys) and Ctrl+Alt+Backspace
@@ -32,11 +34,14 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-echo ">> Installing dependency: tk (provides wish)"
-xbps-install -Sy tk
+echo ">> Installing dependencies: tk (wish), sudo"
+xbps-install -Sy tk sudo
 
 echo ">> Installing gate            -> ${GATE_BIN}"
 install -Dm755 "${SRC}/gate.tcl" "${GATE_BIN}"
+
+echo ">> Installing clock helper    -> ${SETCLOCK_BIN}"
+install -Dm755 -o root -g root "${SRC}/captive-setclock.sh" "${SETCLOCK_BIN}"
 
 echo ">> Installing session wrapper -> ${SESSION_BIN}"
 install -Dm755 "${SRC}/captive-session.sh" "${SESSION_BIN}"
@@ -85,8 +90,21 @@ user="$(grep -E '^autologin-user=' "${LIGHTDM_CONF}" | head -n1 | cut -d= -f2 ||
 if [ -z "${user}" ]; then
     echo "!! WARNING: autologin-user is not set in ${LIGHTDM_CONF}."
     echo "   Add it under [Seat:*], e.g.  autologin-user=youruser"
+    echo "!! Without it the gate cannot be granted permission to set the clock."
 else
     echo ">> Autologin user: ${user}"
+    # Grant exactly one privileged command, password-free, so the gate (running
+    # as this user) can set the system clock.
+    tmp="$(mktemp)"
+    printf '%s ALL=(root) NOPASSWD: %s\n' "${user}" "${SETCLOCK_BIN}" > "${tmp}"
+    if visudo -cf "${tmp}" >/dev/null 2>&1; then
+        install -m 0440 -o root -g root "${tmp}" "${SUDOERS}"
+        echo ">> Installed sudoers rule     -> ${SUDOERS}"
+    else
+        echo "!! Generated sudoers rule failed visudo validation; not installed." >&2
+        echo "!! The gate will not be able to set the clock until this is fixed." >&2
+    fi
+    rm -f "${tmp}"
 fi
 
 echo

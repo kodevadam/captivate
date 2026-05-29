@@ -1,16 +1,19 @@
 #!/usr/bin/env wish
-# Captive time/date gate for an autologin XFCE session.
+# Captive clock-set gate for an autologin XFCE session.
 #
-# Shown fullscreen and override-redirect, with a global input grab, before the
-# desktop starts. The user must type the current date and time (read from a
-# watch/phone) to continue. There is no window manager running in this session,
-# so there is nothing to switch away to; the window has no decorations and
-# cannot be closed. Exits 0 only on a correct answer; wrong answers keep the
-# prompt up.
+# The target machine has no RTC and no network, so it cannot know the time on
+# its own. This gate runs fullscreen before the desktop and asks the human to
+# type the current date and time; whatever they enter becomes the system clock,
+# then XFCE starts. It does NOT validate against the existing clock (there is
+# nothing trustworthy to validate against) and does no timezone conversion -
+# the wall time you type is the wall time the system shows.
+#
+# The window is override-redirect (no titlebar, can't be closed), runs with no
+# window manager, and takes a global input grab, so there is nothing to switch
+# away to. Setting the clock needs root, which comes from a NOPASSWD sudo rule
+# scoped to /usr/local/bin/captive-setclock (installed by install.sh).
 
 package require Tk
-
-set TOLERANCE_MIN 3   ;# how far the typed time may differ from the clock
 
 set BG  "#101216"
 set FG  "#e6e6e6"
@@ -27,9 +30,9 @@ raise .
 frame .c -bg $BG
 place .c -relx 0.5 -rely 0.5 -anchor center
 
-label .c.title -text "Enter the current date and time to continue" \
+label .c.title -text "Set the current date and time to continue" \
     -bg $BG -fg $FG -font {Sans 24 bold}
-label .c.hint  -text "Use 24-hour time. You have a few minutes of leeway." \
+label .c.hint  -text "This becomes the system clock. Use 24-hour time." \
     -bg $BG -fg $DIM -font {Sans 12}
 
 label .c.dlbl -text "Date  (YYYY-MM-DD)" -bg $BG -fg $DIM -font {Sans 11}
@@ -38,7 +41,7 @@ entry .c.date -justify center -font {Sans 18} -width 18
 label .c.tlbl -text "Time  (HH:MM)" -bg $BG -fg $DIM -font {Sans 11}
 entry .c.time -justify center -font {Sans 18} -width 18
 
-button .c.unlock -text "Unlock" -font {Sans 14} -command submit
+button .c.unlock -text "Set clock & continue" -font {Sans 14} -command submit
 label  .c.error  -text "" -bg $BG -fg $ERR -font {Sans 12}
 
 grid .c.title  -row 0 -column 0 -pady {0 4}
@@ -50,42 +53,32 @@ grid .c.time   -row 5 -column 0 -pady {0 12}
 grid .c.unlock -row 6 -column 0 -pady {4 8}
 grid .c.error  -row 7 -column 0
 
-# --- validation -----------------------------------------------------------
+# --- submit ---------------------------------------------------------------
 proc reject {msg} {
     .c.error configure -text $msg
-    .c.time delete 0 end
-    focus -force .c.time
-}
-
-proc parse_dt {date time} {
-    foreach fmt {"%Y-%m-%d %H:%M" "%Y-%m-%d %H.%M"} {
-        if {![catch {clock scan "$date $time" -format $fmt} epoch]} {
-            return $epoch
-        }
-    }
-    return ""
 }
 
 proc submit {} {
-    global TOLERANCE_MIN
-    set now   [clock seconds]
-    set today [clock format $now -format %Y-%m-%d]
     set dt [string trim [.c.date get]]
     set tm [string trim [.c.time get]]
+    regsub {\.} $tm ":" tm   ;# accept 09.39 as 09:39
 
-    if {$dt ne $today} {
-        reject "That date is not correct (use YYYY-MM-DD)."
+    # Accept any real moment, but reject impossible ones. clock scan with
+    # -format is lenient (it rolls 25:99 or 2026-13-40 over), so round-trip the
+    # parse and require it to come back unchanged. We do not compare to the
+    # current clock - there is nothing trustworthy to compare against.
+    if {[catch {clock scan "$dt $tm" -format "%Y-%m-%d %H:%M"} epoch]
+        || [clock format $epoch -format "%Y-%m-%d %H:%M"] ne "$dt $tm"} {
+        reject "Enter a real date (YYYY-MM-DD) and 24-hour time (HH:MM)."
         return
     }
-    set entered [parse_dt $dt $tm]
-    if {$entered eq ""} {
-        reject "Check the time format: HH:MM (24-hour)."
+
+    set stamp "$dt $tm:00"
+    if {[catch {exec sudo -n /usr/local/bin/captive-setclock $stamp} err]} {
+        reject "Could not set the clock. $err"
         return
     }
-    if {abs($now - $entered) > $TOLERANCE_MIN * 60} {
-        reject "That time is not correct."
-        return
-    }
+
     catch {grab release .}
     exit 0
 }

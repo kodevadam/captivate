@@ -23,7 +23,9 @@ elif grep -q "^autologin-session=${SESSION_NAME}" "${LIGHTDM_CONF}" 2>/dev/null;
 fi
 
 rm -f /usr/local/bin/captive-gate /usr/local/bin/captive-session
+rm -f /usr/local/bin/captive-setclock
+rm -f /etc/sudoers.d/captive
 rm -f "/usr/share/xsessions/${SESSION_NAME}.desktop"
 rm -f /etc/X11/xorg.conf.d/10-captive-seal.conf
-echo ">> Removed gate, session wrapper, xsession entry, and VT seal (if any)."
+echo ">> Removed gate, clock helper, sudoers rule, session wrapper, xsession entry, and VT seal (if any)."
 echo ">> Reboot to return to your normal desktop:  sudo reboot"
