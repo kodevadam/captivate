@@ -20,15 +20,15 @@ The gate **is** the X session, so it runs before anything else:
    nothing to alt-tab to.
 3. The gate is fullscreen, `overrideredirect` (no titlebar, can't be closed),
    and takes a global input grab. It asks for the date and time.
-4. On a valid entry it sets the system clock (via a small root helper,
-   `captive-setclock`, allowed through a tightly-scoped NOPASSWD sudo rule) and
-   exits `0`; the wrapper then `exec`s `startxfce4`. If the gate is killed or
-   crashes, the wrapper relaunches it, so it can't be bypassed.
+4. On a valid entry it sets the system **timezone and clock** (via a small root
+   helper, `captive-setclock`, allowed through a tightly-scoped NOPASSWD sudo
+   rule) and exits `0`; the wrapper then `exec`s `startxfce4`. If the gate is
+   killed or crashes, the wrapper relaunches it, so it can't be bypassed.
 
 It does **not** validate your entry against the existing clock — that clock is
-meaningless, which is the whole reason this exists — and does **no timezone
-conversion**. The wall time you type is the wall time the system shows. It only
-rejects *impossible* values (e.g. `25:99`, `2026-02-30`).
+meaningless, which is the whole reason this exists. It only rejects *impossible*
+values (e.g. `25:99`, `2026-02-30`). The time is interpreted in the timezone you
+pick and the system is switched to that zone, so what you type is what shows.
 
 ## Requirements
 
@@ -37,9 +37,10 @@ Already true on a normal autologin XFCE box:
 - LightDM with `autologin-user=` set in `/etc/lightdm/lightdm.conf`.
 - XFCE installed (`startxfce4` on `PATH`).
 
-Installed for you by `install.sh`: `tk` (the `wish` interpreter) and `sudo`.
-The installer needs to fetch those once, so run it with network available, even
-though the gate itself runs fully offline afterwards.
+Installed for you by `install.sh`: `tk` (the `wish` interpreter), `sudo`, and
+`tzdata` (timezone database). The installer needs to fetch those once, so run it
+with network available, even though the gate itself runs fully offline
+afterwards.
 
 ## Install
 
@@ -71,11 +72,16 @@ Enter, then press Enter or click **Set clock & continue**:
 - **Time** — strictly **24-hour** `HH:MM`, `00:00`–`23:59` (e.g. `13:30`;
   `13.30` is also accepted). 12-hour / am-pm input is rejected — 1:30 PM is
   `13:30`.
+- **Timezone** — a dropdown, **defaulting to Japan** (Asia/Tokyo). The time you
+  type is interpreted in this zone and the system is switched to it, so the
+  wall time you enter is exactly what the desktop shows — no offset.
 
 Any real date/time is accepted and becomes the clock. There is no "correct"
 answer to guess and no tolerance window — you are *setting* the time, not
-proving you know it. The clock is set in the machine's own timezone, so the
-wall time you type is exactly what the desktop shows — no offset.
+proving you know it.
+
+To change the dropdown list or default, edit the `ZONES` table at the top of
+`gate.tcl` (first entry is the default).
 
 **Escape hatch:** press **Ctrl+Alt+Esc** at the gate to skip straight into a
 normal XFCE session without setting the clock. Because the desktop autologins,
@@ -132,7 +138,7 @@ machine and delete `/etc/X11/xorg.conf.d/10-captive-seal.conf` (and reset
 | File | Installed to | Purpose |
 |------|--------------|---------|
 | `gate.tcl` | `/usr/local/bin/captive-gate` | the Tcl/Tk gate |
-| `captive-setclock.sh` | `/usr/local/bin/captive-setclock` | root helper that runs `date -s` (input whitelisted) |
+| `captive-setclock.sh` | `/usr/local/bin/captive-setclock` | root helper that sets the timezone + clock (inputs whitelisted) |
 | `captive-session.sh` | `/usr/local/bin/captive-session` | session wrapper that gates XFCE |
 | `captive-xfce.desktop` | `/usr/share/xsessions/captive-xfce.desktop` | LightDM session entry |
 | `install.sh` | — | installer (`--seal` for full lockdown) |

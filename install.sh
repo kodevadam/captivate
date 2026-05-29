@@ -34,8 +34,8 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-echo ">> Installing dependencies: tk (wish), sudo"
-xbps-install -Sy tk sudo
+echo ">> Installing dependencies: tk (wish), sudo, tzdata"
+xbps-install -Sy tk sudo tzdata
 
 echo ">> Installing gate            -> ${GATE_BIN}"
 install -Dm755 "${SRC}/gate.tcl" "${GATE_BIN}"

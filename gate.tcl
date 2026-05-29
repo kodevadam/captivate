@@ -3,10 +3,11 @@
 #
 # The target machine has no RTC and no network, so it cannot know the time on
 # its own. This gate runs fullscreen before the desktop and asks the human to
-# type the current date and time; whatever they enter becomes the system clock,
-# then XFCE starts. It does NOT validate against the existing clock (there is
-# nothing trustworthy to validate against) and does no timezone conversion -
-# the wall time you type is the wall time the system shows.
+# pick a timezone and type the current date and time; that becomes the system
+# clock and timezone, then XFCE starts. It does NOT validate against the
+# existing clock (there is nothing trustworthy to validate against). The time
+# you type is interpreted in the timezone you pick, so it shows unchanged on
+# the desktop.
 #
 # The window is override-redirect (no titlebar, can't be closed), runs with no
 # window manager, and takes a global input grab, so there is nothing to switch
@@ -19,6 +20,23 @@ set BG  "#101216"
 set FG  "#e6e6e6"
 set DIM "#9aa0a6"
 set ERR "#ff6b6b"
+
+# Friendly label -> zoneinfo name. First entry is the default selection.
+set ZONES {
+    "Japan"           "Asia/Tokyo"
+    "Korea"           "Asia/Seoul"
+    "China"           "Asia/Shanghai"
+    "India"           "Asia/Kolkata"
+    "UTC"             "UTC"
+    "UK"              "Europe/London"
+    "Central Europe"  "Europe/Paris"
+    "US Eastern"      "America/New_York"
+    "US Central"      "America/Chicago"
+    "US Mountain"     "America/Denver"
+    "US Pacific"      "America/Los_Angeles"
+    "Australia East"  "Australia/Sydney"
+}
+set tzlabel [lindex $ZONES 0]
 
 # --- window ---------------------------------------------------------------
 wm overrideredirect . 1
@@ -41,6 +59,15 @@ entry .c.date -justify center -font {Sans 18} -width 18
 label .c.tlbl -text "Time  (24-hour, 00:00 - 23:59)" -bg $BG -fg $DIM -font {Sans 11}
 entry .c.time -justify center -font {Sans 18} -width 18
 
+label .c.zlbl -text "Timezone" -bg $BG -fg $DIM -font {Sans 11}
+set tz_labels {}
+foreach {lbl z} $ZONES { lappend tz_labels $lbl }
+tk_optionMenu .c.tz ::tzlabel {*}$tz_labels
+.c.tz configure -bg $BG -fg $FG -activebackground $BG -activeforeground $FG \
+    -highlightthickness 0 -font {Sans 14} -width 16
+[.c.tz cget -menu] configure -bg $BG -fg $FG -activebackground "#2a2f3a" \
+    -activeforeground $FG
+
 button .c.unlock -text "Set clock & continue" -font {Sans 14} -command submit
 label  .c.error  -text "" -bg $BG -fg $ERR -font {Sans 12}
 label  .c.bypass -text "Ctrl+Alt+Esc  -  skip to the desktop" \
@@ -52,13 +79,20 @@ grid .c.dlbl   -row 2 -column 0 -sticky w
 grid .c.date   -row 3 -column 0 -pady {0 12}
 grid .c.tlbl   -row 4 -column 0 -sticky w
 grid .c.time   -row 5 -column 0 -pady {0 12}
-grid .c.unlock -row 6 -column 0 -pady {4 8}
-grid .c.error  -row 7 -column 0
-grid .c.bypass -row 8 -column 0 -pady {18 0}
+grid .c.zlbl   -row 6 -column 0 -sticky w
+grid .c.tz     -row 7 -column 0 -pady {0 12} -sticky ew
+grid .c.unlock -row 8 -column 0 -pady {4 8}
+grid .c.error  -row 9 -column 0
+grid .c.bypass -row 10 -column 0 -pady {18 0}
 
 # --- submit ---------------------------------------------------------------
 proc reject {msg} {
     .c.error configure -text $msg
+}
+
+proc zone_for {label} {
+    foreach {lbl z} $::ZONES { if {$lbl eq $label} { return $z } }
+    return "UTC"
 }
 
 proc submit {} {
@@ -76,8 +110,9 @@ proc submit {} {
         return
     }
 
+    set zone [zone_for $::tzlabel]
     set stamp "$dt $tm:00"
-    if {[catch {exec sudo -n /usr/local/bin/captive-setclock $stamp} err]} {
+    if {[catch {exec sudo -n /usr/local/bin/captive-setclock $zone $stamp} err]} {
         reject "Could not set the clock. $err"
         return
     }
