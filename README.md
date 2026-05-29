@@ -68,11 +68,14 @@ and session files from alongside itself. It will:
 Enter, then press Enter or click **Set clock & continue**:
 
 - **Date** — `YYYY-MM-DD`, zero-padded (e.g. `2026-05-29`).
-- **Time** — 24-hour `HH:MM` (e.g. `09:39`; `09.39` is also accepted).
+- **Time** — strictly **24-hour** `HH:MM`, `00:00`–`23:59` (e.g. `13:30`;
+  `13.30` is also accepted). 12-hour / am-pm input is rejected — 1:30 PM is
+  `13:30`.
 
 Any real date/time is accepted and becomes the clock. There is no "correct"
 answer to guess and no tolerance window — you are *setting* the time, not
-proving you know it.
+proving you know it. The clock is set in the machine's own timezone, so the
+wall time you type is exactly what the desktop shows — no offset.
 
 **Escape hatch:** press **Ctrl+Alt+Esc** at the gate to skip straight into a
 normal XFCE session without setting the clock. Because the desktop autologins,

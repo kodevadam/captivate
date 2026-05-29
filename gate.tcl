@@ -32,13 +32,13 @@ place .c -relx 0.5 -rely 0.5 -anchor center
 
 label .c.title -text "Set the current date and time to continue" \
     -bg $BG -fg $FG -font {Sans 24 bold}
-label .c.hint  -text "This becomes the system clock. Use 24-hour time." \
+label .c.hint  -text "This sets the system clock. Time is 24-hour: 1:30 PM = 13:30." \
     -bg $BG -fg $DIM -font {Sans 12}
 
 label .c.dlbl -text "Date  (YYYY-MM-DD)" -bg $BG -fg $DIM -font {Sans 11}
 entry .c.date -justify center -font {Sans 18} -width 18
 
-label .c.tlbl -text "Time  (HH:MM)" -bg $BG -fg $DIM -font {Sans 11}
+label .c.tlbl -text "Time  (24-hour, 00:00 - 23:59)" -bg $BG -fg $DIM -font {Sans 11}
 entry .c.time -justify center -font {Sans 18} -width 18
 
 button .c.unlock -text "Set clock & continue" -font {Sans 14} -command submit
@@ -72,7 +72,7 @@ proc submit {} {
     # current clock - there is nothing trustworthy to compare against.
     if {[catch {clock scan "$dt $tm" -format "%Y-%m-%d %H:%M"} epoch]
         || [clock format $epoch -format "%Y-%m-%d %H:%M"] ne "$dt $tm"} {
-        reject "Enter a real date (YYYY-MM-DD) and 24-hour time (HH:MM)."
+        reject "Use date YYYY-MM-DD and 24-hour time 00:00-23:59 (e.g. 13:30)."
         return
     }
 
